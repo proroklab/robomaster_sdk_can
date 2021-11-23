@@ -14,7 +14,7 @@
 #include <iostream>
 #include <fcntl.h>
 
-#include <CANManager.hpp>
+#include <can_streambuf.hpp>
 
 
 #include <chrono>
@@ -23,9 +23,9 @@
 
 int main(int, char **)
 {
-    auto can = CANManager("can0", 0x202);
+    auto can = can_streambuf("can0", 0x202);
     std::cout << "INIT" << std::endl;
-    //auto can2 = CANManager("can0", 0x202);
+    //auto can2 = can_streambuf("can0", 0x202);
     std::ostream out(&can);
     std::istream is(&can);
     while(true) {

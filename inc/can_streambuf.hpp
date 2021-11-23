@@ -4,9 +4,9 @@
 #include <cstring>
 #include <streambuf>
 
-class CANManager : public std::basic_streambuf<char> {
+class can_streambuf : public std::basic_streambuf<char> {
 public:
-    CANManager(const std::string iface_name, const unsigned int can_id)
+    can_streambuf(const std::string iface_name, const unsigned int can_id)
         : _can_id{can_id}
     {
         if ((_pf.fd = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
@@ -39,7 +39,7 @@ public:
         setp(outbuf, outbuf+7);
     }
 
-    ~CANManager() {
+    ~can_streambuf() {
         close(_pf.fd);
     }
 
