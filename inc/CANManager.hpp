@@ -1,10 +1,13 @@
 #include <vector>
 #include <string>
 #include <exception>
+#include <cstring>
+#include <streambuf>
 
-class CANManager {
+class CANManager : public std::basic_streambuf<char> {
 public:
     CANManager(const std::string iface_name, const unsigned int can_id)
+        : _can_id{can_id}
     {
         if ((_pf.fd = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
             throw std::system_error(EFAULT, std::generic_category());
@@ -12,7 +15,7 @@ public:
         _pf.events = POLLIN;
 
         struct can_filter rfilter;
-        rfilter.can_id = can_id;
+        rfilter.can_id = _can_id;
         rfilter.can_mask = CAN_EFF_MASK;
         setsockopt(_pf.fd, SOL_CAN_RAW, CAN_RAW_FILTER, &rfilter, sizeof(rfilter));
 
@@ -30,27 +33,49 @@ public:
         if (bind(_pf.fd, (struct sockaddr *)&_addr, sizeof(_addr)) < 0) {
             throw std::system_error(EFAULT, std::generic_category());
         }
+
+        // stream init
+        setg(inbuf, inbuf, inbuf);
+        setp(outbuf, outbuf+7);
     }
 
     ~CANManager() {
         close(_pf.fd);
     }
 
-    int Run() {
-        struct can_frame frame {};
+private:
+    struct sockaddr_can _addr {};
+    struct pollfd _pf;
 
-        frame.can_id = 0xab;
-        frame.can_dlc = 8;
+    char inbuf[8];
+    char outbuf[8];
+
+    canid_t _can_id;
+
+    int sync() {
+        struct can_frame frame {};
+        frame.can_id = _can_id;
+        frame.can_dlc = pptr() - pbase();
+        std::memmove(frame.data, outbuf, frame.can_dlc);
 
         if (write(_pf.fd, &frame, CAN_MTU) != CAN_MTU) {
-            perror("write");
-            return 1;
+            return -1;
         }
 
-        int ready;
-        ready = poll(&_pf, 1, 10);
-        if (ready == -1)
-            return 1;
+        pbump(pbase() - pptr());
+        return 0;
+    }
+
+    int_type overflow(int_type ch) {
+        *pptr() = ch;
+        pbump(1);
+
+        return (sync() == -1 ? std::char_traits<char>::eof() : ch);
+    }
+
+    int_type underflow() {
+        //if (poll(&_pf, 1, -1) <= 0)
+        //    return EOF;
 
         struct msghdr msg;
         struct iovec iov;
@@ -60,28 +85,26 @@ public:
         msg.msg_iov = &iov;
         msg.msg_iovlen = 1;
 
-        for (int i = 0; i < ready; i++) {
-            iov.iov_len = sizeof(rx_frame);
-            msg.msg_namelen = sizeof(_addr);
-            msg.msg_controllen = 0;
-            msg.msg_flags = 0;
+        iov.iov_len = sizeof(rx_frame);
+        msg.msg_namelen = sizeof(_addr);
+        msg.msg_controllen = 0;
+        msg.msg_flags = 0;
 
-            int nbytes = recvmsg(_pf.fd, &msg, 0);
-            if (nbytes < 0) {
-                perror("read");
-                return 1;
-            }
-
-            if ((size_t)nbytes != CAN_MTU) {
-                fprintf(stderr, "read: nbytes\n");
-                return 1;
-            }
-            printf("frame id %d\n", rx_frame.can_id);
+        int nbytes = recvmsg(_pf.fd, &msg, 0);
+        if (nbytes < 0) {
+            perror("read");
+            return std::char_traits<char>::eof();
         }
 
-        return 0;
+        if ((size_t)nbytes != CAN_MTU) {
+            fprintf(stderr, "read: nbytes\n");
+            return std::char_traits<char>::eof();
+        }
+
+        std::memmove(inbuf, rx_frame.data, rx_frame.can_dlc);
+
+        setg(inbuf, inbuf, inbuf + rx_frame.can_dlc);
+        return *gptr();
     }
-private:
-    struct sockaddr_can _addr {};
-    struct pollfd _pf;
+
 };
