@@ -3,6 +3,6 @@ project(robomaster_comm)
 
 include_directories(${PROJECT_SOURCE_DIR}/inc)
 
-add_executable(can_demo can_demo.cpp inc/can_streambuf.hpp)
+add_executable(can_demo can_demo.cpp inc/can_streambuf.hpp inc/robomaster_protocol.hpp inc/crc.hpp)
 
 target_compile_options(can_demo PRIVATE -Wall -Wextra -Wpedantic)
