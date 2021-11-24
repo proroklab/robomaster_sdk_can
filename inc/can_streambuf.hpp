@@ -74,37 +74,17 @@ private:
     }
 
     int_type underflow() {
-        //if (poll(&_pf, 1, -1) <= 0)
-        //    return EOF;
-
-        struct msghdr msg;
-        struct iovec iov;
         struct can_frame rx_frame;
-        iov.iov_base = &rx_frame;
-        msg.msg_name = &_addr;
-        msg.msg_iov = &iov;
-        msg.msg_iovlen = 1;
-
-        iov.iov_len = sizeof(rx_frame);
-        msg.msg_namelen = sizeof(_addr);
-        msg.msg_controllen = 0;
-        msg.msg_flags = 0;
-
-        int nbytes = recvmsg(_pf.fd, &msg, 0);
-        if (nbytes < 0) {
+        const auto nbytes = read(_pf.fd, &rx_frame, sizeof(struct can_frame));
+        if (nbytes <= 0) {
             perror("read");
-            return std::char_traits<char>::eof();
-        }
-
-        if ((size_t)nbytes != CAN_MTU) {
-            fprintf(stderr, "read: nbytes\n");
             return std::char_traits<char>::eof();
         }
 
         std::memmove(inbuf, rx_frame.data, rx_frame.can_dlc);
 
         setg(inbuf, inbuf, inbuf + rx_frame.can_dlc);
-        return *gptr();
+        return std::char_traits<char>::to_int_type(*gptr());
     }
 
 };
