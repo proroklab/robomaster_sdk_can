@@ -53,16 +53,19 @@ private:
     canid_t _can_id;
 
     int sync() {
-        struct can_frame frame {};
+        struct can_frame frame;
         frame.can_id = _can_id;
         frame.can_dlc = pptr() - pbase();
-        std::memmove(frame.data, outbuf, frame.can_dlc);
+        if (frame.can_dlc > 0)
+        {
+            std::memmove(frame.data, outbuf, frame.can_dlc);
 
-        if (write(_pf.fd, &frame, CAN_MTU) != CAN_MTU) {
-            return -1;
+            if (write(_pf.fd, &frame, CAN_MTU) != CAN_MTU) {
+                return -1;
+            }
+
+            pbump(pbase() - pptr());
         }
-
-        pbump(pbase() - pptr());
         return 0;
     }
 
