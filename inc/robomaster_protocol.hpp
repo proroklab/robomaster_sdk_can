@@ -119,7 +119,7 @@ std::ostream& operator<<(std::ostream& out, const package& pkg)
         static_cast<uint8_t>(pkg._data.size() + 10),
         MAGIC_NUMBER_B
     };
-    const auto crc_header = crc::compute_crc8(CRC_HEADER_INIT, serial_data);
+    const auto crc_header = crc::crc(CRC_HEADER_INIT, serial_data);
     serial_data.push_back(crc_header);
 
     auto pkg_id_b = reinterpret_cast<const uint8_t*>(&pkg._id);
@@ -129,7 +129,7 @@ std::ostream& operator<<(std::ostream& out, const package& pkg)
 
     serial_data.insert(serial_data.end(), pkg._data.begin(), pkg._data.end());
 
-    const auto crc_package = crc::compute_crc16(CRC_PACKAGE_INIT, serial_data);
+    const auto crc_package = crc::crc(CRC_PACKAGE_INIT, serial_data);
     auto crc_package_b = reinterpret_cast<const uint8_t*>(&crc_package);
     serial_data.insert(serial_data.end(), crc_package_b, crc_package_b + 2);
 
@@ -152,7 +152,7 @@ std::istream& operator>>(std::istream& in, package& pkg)
 
         uint8_t crc_header_parsed = in.get();
         std::vector<uint8_t> data{MAGIC_NUMBER_A, length_parsed, MAGIC_NUMBER_B};
-        const auto crc_header_expected = crc::compute_crc8(CRC_HEADER_INIT, data);
+        const auto crc_header_expected = crc::crc(CRC_HEADER_INIT, data);
 
         if (crc_header_parsed != crc_header_expected)
         {
@@ -167,7 +167,7 @@ std::istream& operator>>(std::istream& in, package& pkg)
         in.read(reinterpret_cast<char*>(&crc_package_parsed), 2);
 
         // Finished parsing, verify package checksum
-        const auto crc_package_expected = crc::compute_crc16(CRC_PACKAGE_INIT, data);
+        const auto crc_package_expected = crc::crc(CRC_PACKAGE_INIT, data);
 
         if (crc_package_parsed != crc_package_expected)
         {

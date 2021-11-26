@@ -61,7 +61,7 @@ constexpr static uint16_t CRC16_TABLE[256] =
     0x7bc7, 0x6a4e, 0x58d5, 0x495c, 0x3de3, 0x2c6a, 0x1ef1, 0x0f78
 };
 
-uint8_t compute_crc8(const uint8_t seed, const std::vector<uint8_t>& data)
+uint8_t crc(const uint8_t seed, const std::vector<uint8_t>& data)
 {
     uint8_t crc = seed;
 
@@ -73,7 +73,7 @@ uint8_t compute_crc8(const uint8_t seed, const std::vector<uint8_t>& data)
     return crc;
 }
 
-uint16_t compute_crc16(const uint16_t seed, const std::vector<uint8_t>& data)
+uint16_t crc(const uint16_t seed, const std::vector<uint8_t>& data)
 {
     uint16_t crc = seed;
 
