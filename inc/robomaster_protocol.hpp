@@ -8,14 +8,16 @@
 
 #include <crc.hpp>
 
-namespace robomaster {
+namespace robomaster
+{
 
 constexpr static uint8_t MAGIC_NUMBER_A = 0x55;
 constexpr static uint8_t MAGIC_NUMBER_B = 0x04;
 constexpr static uint8_t CRC_HEADER_INIT = 119;
 constexpr static uint16_t CRC_PACKAGE_INIT = 13970;
 
-class package {
+class package
+{
 public:
     package() : _id{0}, _count{0}, _data{} {}
     package(uint16_t id, std::vector<uint8_t>& data) : _id{id}, _count{0}, _data{data} {}
@@ -45,14 +47,15 @@ private:
     std::vector<uint8_t> _data;
 };
 
-class id_tracker {
+class id_tracker
+{
 public:
     id_tracker() {}
 
     unsigned int get_count_for_id(unsigned int id)
     {
         const auto it = _id_counts.find(id);
-        if (it == _id_counts.end())
+        if(it == _id_counts.end())
         {
             _id_counts[id] = 0;
             return 0;
@@ -79,7 +82,8 @@ private:
 std::ostream& operator<<(std::ostream& out, const package& pkg)
 {
     const auto id_count = id_tracker::get_instance().get_count_for_id(pkg._id);
-    std::vector<uint8_t> serial_data = {
+    std::vector<uint8_t> serial_data =
+    {
         MAGIC_NUMBER_A,
         static_cast<uint8_t>(pkg._data.size() + 10),
         MAGIC_NUMBER_B
@@ -108,7 +112,8 @@ std::istream& operator>>(std::istream& in, package& pkg)
         while(in.get() != MAGIC_NUMBER_A);
         uint8_t length_parsed = in.get();
         uint8_t magic_number_b = in.get();
-        if (magic_number_b != MAGIC_NUMBER_B) {
+        if(magic_number_b != MAGIC_NUMBER_B)
+        {
             continue;
         }
 
@@ -116,7 +121,8 @@ std::istream& operator>>(std::istream& in, package& pkg)
         std::vector<uint8_t> data{MAGIC_NUMBER_A, length_parsed, MAGIC_NUMBER_B};
         const auto crc_header_expected = crc::compute_crc8(CRC_HEADER_INIT, data);
 
-        if (crc_header_parsed != crc_header_expected) {
+        if(crc_header_parsed != crc_header_expected)
+        {
             continue;
         }
         data.push_back(crc_header_parsed);
@@ -128,7 +134,8 @@ std::istream& operator>>(std::istream& in, package& pkg)
 
         // Finished parsing, verify package checksum
         const auto crc_package_expected = crc::compute_crc16(CRC_PACKAGE_INIT, data);
-        if (crc_package_parsed != crc_package_expected) {
+        if(crc_package_parsed != crc_package_expected)
+        {
             continue;
         }
 

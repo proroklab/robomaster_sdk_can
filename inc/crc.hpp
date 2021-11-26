@@ -1,7 +1,12 @@
-#include <cstdint>
+#pragma once
 
-namespace crc {
-constexpr static uint8_t CRC8_TABLE[256] = {
+#include <cstdint>
+#include <vector>
+
+namespace crc
+{
+constexpr static uint8_t CRC8_TABLE[256] =
+{
     0x00, 0x5e, 0xbc, 0xe2, 0x61, 0x3f, 0xdd, 0x83, 0xc2, 0x9c, 0x7e, 0x20, 0xa3, 0xfd, 0x1f, 0x41,
     0x9d, 0xc3, 0x21, 0x7f, 0xfc, 0xa2, 0x40, 0x1e, 0x5f, 0x01, 0xe3, 0xbd, 0x3e, 0x60, 0x82, 0xdc,
     0x23, 0x7d, 0x9f, 0xc1, 0x42, 0x1c, 0xfe, 0xa0, 0xe1, 0xbf, 0x5d, 0x03, 0x80, 0xde, 0x3c, 0x62,
@@ -59,7 +64,7 @@ constexpr static uint16_t CRC16_TABLE[256] =
 uint8_t compute_crc8(const uint8_t seed, const std::vector<uint8_t>& data)
 {
     uint8_t crc = seed;
-    for (const auto& d : data)
+    for(const auto& d : data)
     {
         crc = CRC8_TABLE[crc ^ d];
     }
@@ -69,7 +74,7 @@ uint8_t compute_crc8(const uint8_t seed, const std::vector<uint8_t>& data)
 uint16_t compute_crc16(const uint16_t seed, const std::vector<uint8_t>& data)
 {
     uint16_t crc = seed;
-    for (const auto& d : data)
+    for(const auto& d : data)
     {
         crc = (crc >> 8) ^ CRC16_TABLE[static_cast<uint8_t>((crc ^ d) & 0x00ff)];
     }
