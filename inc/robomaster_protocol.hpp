@@ -4,6 +4,7 @@
 #include <cstring>
 #include <streambuf>
 #include <thread>
+#include <deque>
 #include <map>
 
 #include <crc.hpp>
@@ -20,7 +21,8 @@ class package
 {
 public:
     package() : _id{0}, _count{0}, _data{} {}
-    package(uint16_t id, std::vector<uint8_t>& data) : _id{id}, _count{0}, _data{data} {}
+    package(uint16_t id) : _id{id}, _count{0}, _data{} {}
+    package(uint16_t id, std::deque<uint8_t>& data) : _id{id}, _count{0}, _data{data} {}
 
     auto get_id() const
     {
@@ -37,15 +39,43 @@ public:
         return _data;
     }
 
+    template <typename T>
+    auto put(const T var)
+    {
+        auto bytes = reinterpret_cast<const uint8_t*>(&var);
+        _data.insert(_data.end(), bytes, bytes+sizeof(T));
+        return this;
+    }
+
+    template <typename T>
+    auto get(T& var)
+    {
+        std::vector<uint8_t> data{_data.begin(), _data.begin() + sizeof(T)};
+        var = *reinterpret_cast<T*>(data.data());
+        _data.erase(_data.begin(), _data.begin() + sizeof(T));
+        return this;
+    }
+
+private:
     friend std::ostream & operator << (std::ostream &out, const package &c);
     friend std::istream & operator >> (std::istream &in,  package &c);
 
-private:
-
     uint16_t _id;
     uint16_t _count;
-    std::vector<uint8_t> _data;
+    std::deque<uint8_t> _data;
 };
+
+template <typename T>
+package& operator<<(package& pkg, const T& var)
+{
+    return *pkg.put(var);
+}
+
+template <typename T>
+package& operator>>(package& pkg, T& var)
+{
+    return *pkg.get(var);
+}
 
 class id_tracker
 {
