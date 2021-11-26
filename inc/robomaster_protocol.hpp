@@ -43,7 +43,7 @@ public:
     auto put(const T var)
     {
         auto bytes = reinterpret_cast<const uint8_t*>(&var);
-        _data.insert(_data.end(), bytes, bytes+sizeof(T));
+        _data.insert(_data.end(), bytes, bytes + sizeof(T));
         return this;
     }
 
@@ -57,8 +57,8 @@ public:
     }
 
 private:
-    friend std::ostream & operator << (std::ostream &out, const package &c);
-    friend std::istream & operator >> (std::istream &in,  package &c);
+    friend std::ostream& operator << (std::ostream& out, const package& c);
+    friend std::istream& operator >> (std::istream& in,  package& c);
 
     uint16_t _id;
     uint16_t _count;
@@ -85,7 +85,8 @@ public:
     unsigned int get_count_for_id(unsigned int id)
     {
         const auto it = _id_counts.find(id);
-        if(it == _id_counts.end())
+
+        if (it == _id_counts.end())
         {
             _id_counts[id] = 0;
             return 0;
@@ -122,27 +123,29 @@ std::ostream& operator<<(std::ostream& out, const package& pkg)
     serial_data.push_back(crc_header);
 
     auto pkg_id_b = reinterpret_cast<const uint8_t*>(&pkg._id);
-    serial_data.insert(serial_data.end(), pkg_id_b, pkg_id_b+2);
+    serial_data.insert(serial_data.end(), pkg_id_b, pkg_id_b + 2);
     auto id_count_b = reinterpret_cast<const uint8_t*>(&id_count);
-    serial_data.insert(serial_data.end(), id_count_b, id_count_b+2);
+    serial_data.insert(serial_data.end(), id_count_b, id_count_b + 2);
 
     serial_data.insert(serial_data.end(), pkg._data.begin(), pkg._data.end());
 
     const auto crc_package = crc::compute_crc16(CRC_PACKAGE_INIT, serial_data);
     auto crc_package_b = reinterpret_cast<const uint8_t*>(&crc_package);
-    serial_data.insert(serial_data.end(), crc_package_b, crc_package_b+2);
+    serial_data.insert(serial_data.end(), crc_package_b, crc_package_b + 2);
 
     return out.write(reinterpret_cast<char*>(serial_data.data()), serial_data.size());
 }
 
 std::istream& operator>>(std::istream& in, package& pkg)
 {
-    while(true)
+    while (true)
     {
-        while(in.get() != MAGIC_NUMBER_A);
+        while (in.get() != MAGIC_NUMBER_A);
+
         uint8_t length_parsed = in.get();
         uint8_t magic_number_b = in.get();
-        if(magic_number_b != MAGIC_NUMBER_B)
+
+        if (magic_number_b != MAGIC_NUMBER_B)
         {
             continue;
         }
@@ -151,10 +154,11 @@ std::istream& operator>>(std::istream& in, package& pkg)
         std::vector<uint8_t> data{MAGIC_NUMBER_A, length_parsed, MAGIC_NUMBER_B};
         const auto crc_header_expected = crc::compute_crc8(CRC_HEADER_INIT, data);
 
-        if(crc_header_parsed != crc_header_expected)
+        if (crc_header_parsed != crc_header_expected)
         {
             continue;
         }
+
         data.push_back(crc_header_parsed);
         data.resize(length_parsed - 2); // don't consider checksum
         in.read(reinterpret_cast<char*>(&data[4]), length_parsed - 4 - 2); // don't parse header and checksum
@@ -164,7 +168,8 @@ std::istream& operator>>(std::istream& in, package& pkg)
 
         // Finished parsing, verify package checksum
         const auto crc_package_expected = crc::compute_crc16(CRC_PACKAGE_INIT, data);
-        if(crc_package_parsed != crc_package_expected)
+
+        if (crc_package_parsed != crc_package_expected)
         {
             continue;
         }

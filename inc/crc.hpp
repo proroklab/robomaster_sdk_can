@@ -64,20 +64,24 @@ constexpr static uint16_t CRC16_TABLE[256] =
 uint8_t compute_crc8(const uint8_t seed, const std::vector<uint8_t>& data)
 {
     uint8_t crc = seed;
-    for(const auto& d : data)
+
+    for (const auto& d : data)
     {
         crc = CRC8_TABLE[crc ^ d];
     }
+
     return crc;
 }
 
 uint16_t compute_crc16(const uint16_t seed, const std::vector<uint8_t>& data)
 {
     uint16_t crc = seed;
-    for(const auto& d : data)
+
+    for (const auto& d : data)
     {
         crc = (crc >> 8) ^ CRC16_TABLE[static_cast<uint8_t>((crc ^ d) & 0x00ff)];
     }
+
     return crc;
 }
 }
