@@ -7,95 +7,35 @@
 #include <deque>
 #include <map>
 
+#include <iomanip>
 #include <crc.hpp>
 
 namespace robomaster
 {
 
-constexpr static uint8_t MAGIC_NUMBER_A = 0x55;
-constexpr static uint8_t MAGIC_NUMBER_B = 0x04;
+constexpr static uint8_t PKG_START_BYTE = 0x55;
 constexpr static uint8_t CRC_HEADER_INIT = 119;
 constexpr static uint16_t CRC_PACKAGE_INIT = 13970;
-
-class package
-{
-public:
-    package() : _id{0}, _count{0}, _data{} {}
-    package(uint16_t id) : _id{id}, _count{0}, _data{} {}
-    package(uint16_t id, std::deque<uint8_t>& data) : _id{id}, _count{0}, _data{data} {}
-
-    auto get_id() const
-    {
-        return _id;
-    }
-
-    auto get_count() const
-    {
-        return _count;
-    }
-
-    auto& get_data() const
-    {
-        return _data;
-    }
-
-    template <typename T>
-    auto put(const T var)
-    {
-        auto bytes = reinterpret_cast<const uint8_t*>(&var);
-        _data.insert(_data.end(), bytes, bytes + sizeof(T));
-        return this;
-    }
-
-    template <typename T>
-    auto get(T& var)
-    {
-        std::vector<uint8_t> data{_data.begin(), _data.begin() + sizeof(T)};
-        var = *reinterpret_cast<T*>(data.data());
-        _data.erase(_data.begin(), _data.begin() + sizeof(T));
-        return this;
-    }
-
-private:
-    friend std::ostream& operator << (std::ostream& out, const package& c);
-    friend std::istream& operator >> (std::istream& in,  package& c);
-
-    uint16_t _id;
-    uint16_t _count;
-    std::deque<uint8_t> _data;
-};
-
-template <typename T>
-package& operator<<(package& pkg, const T& var)
-{
-    return *pkg.put(var);
-}
-
-template <typename T>
-package& operator>>(package& pkg, T& var)
-{
-    return *pkg.get(var);
-}
 
 class id_tracker
 {
 public:
     id_tracker() {}
 
-    unsigned int get_count_for_id(unsigned int id)
+    unsigned int get_count_for_id(uint16_t id)
     {
-        const auto it = _id_counts.find(id);
+        const auto it = _seq_id_counts.find(id);
 
-        if (it == _id_counts.end())
+        if (it == _seq_id_counts.end())
         {
-            _id_counts[id] = 0;
+            _seq_id_counts[id] = 0;
             return 0;
         }
         else
         {
-            auto count = it->second;
+            const auto current_seq_id = it->second;
             it->second += 1;
-            return count;
+            return current_seq_id;
         }
     }
 
@@ -106,81 +46,191 @@ public:
     }
 
 private:
-    std::map<unsigned int, unsigned int> _id_counts;
+    std::map<uint16_t, unsigned int> _seq_id_counts;
 
 };
 
-std::ostream& operator<<(std::ostream& out, const package& pkg)
+class package
 {
-    const auto id_count = id_tracker::get_instance().get_count_for_id(pkg._id);
-    std::vector<uint8_t> serial_data =
+public:
+    package()
+        : is_ack{false}
+        , need_ack{false}
+        , seq_id{0}
+        , sender{0}
+        , receiver{0}
+        , cmd_set{0}
+        , cmd_id{0}
+        , data{}
+    {}
+
+    package(uint8_t sender, uint8_t receiver, uint8_t cmd_set, uint8_t cmd_id, bool is_ack, bool need_ack)
+        : is_ack{is_ack}
+        , need_ack{need_ack}
+        , seq_id{0}
+        , sender{sender}
+        , receiver{receiver}
+        , cmd_set{cmd_set}
+        , cmd_id{cmd_id}
+    {}
+
+    package(uint8_t sender, uint8_t receiver, uint8_t cmd_set, uint8_t cmd_id, bool is_ack, bool need_ack, const std::deque<uint8_t>& data)
+        : is_ack{is_ack}
+        , need_ack{need_ack}
+        , seq_id{0}
+        , sender{sender}
+        , receiver{receiver}
+        , cmd_set{cmd_set}
+        , cmd_id{cmd_id}
+        , data{data}
+    {}
+
+    template <typename T>
+    void put(const T var)
     {
-        MAGIC_NUMBER_A,
-        static_cast<uint8_t>(pkg._data.size() + 10),
-        MAGIC_NUMBER_B
-    };
-    const auto crc_header = crc::crc(CRC_HEADER_INIT, serial_data);
-    serial_data.push_back(crc_header);
-
-    auto pkg_id_b = reinterpret_cast<const uint8_t*>(&pkg._id);
-    serial_data.insert(serial_data.end(), pkg_id_b, pkg_id_b + 2);
-    auto id_count_b = reinterpret_cast<const uint8_t*>(&id_count);
-    serial_data.insert(serial_data.end(), id_count_b, id_count_b + 2);
-
-    serial_data.insert(serial_data.end(), pkg._data.begin(), pkg._data.end());
-
-    const auto crc_package = crc::crc(CRC_PACKAGE_INIT, serial_data);
-    auto crc_package_b = reinterpret_cast<const uint8_t*>(&crc_package);
-    serial_data.insert(serial_data.end(), crc_package_b, crc_package_b + 2);
-
-    return out.write(reinterpret_cast<char*>(serial_data.data()), serial_data.size());
-}
-
-std::istream& operator>>(std::istream& in, package& pkg)
-{
-    while (true)
-    {
-        while (in.get() != MAGIC_NUMBER_A);
-
-        uint8_t length_parsed = in.get();
-        uint8_t magic_number_b = in.get();
-
-        if (magic_number_b != MAGIC_NUMBER_B)
-        {
-            continue;
-        }
-
-        uint8_t crc_header_parsed = in.get();
-        std::vector<uint8_t> data{MAGIC_NUMBER_A, length_parsed, MAGIC_NUMBER_B};
-        const auto crc_header_expected = crc::crc(CRC_HEADER_INIT, data);
-
-        if (crc_header_parsed != crc_header_expected)
-        {
-            continue;
-        }
-
-        data.push_back(crc_header_parsed);
-        data.resize(length_parsed - 2); // don't consider checksum
-        in.read(reinterpret_cast<char*>(&data[4]), length_parsed - 4 - 2); // don't parse header and checksum
-
-        uint16_t crc_package_parsed;
-        in.read(reinterpret_cast<char*>(&crc_package_parsed), 2);
-
-        // Finished parsing, verify package checksum
-        const auto crc_package_expected = crc::crc(CRC_PACKAGE_INIT, data);
-
-        if (crc_package_parsed != crc_package_expected)
-        {
-            continue;
-        }
-
-        // now move into package data
-        pkg._id = *(reinterpret_cast<uint16_t*>(&data[4]));
-        pkg._count = *(reinterpret_cast<uint16_t*>(&data[6]));
-        pkg._data.assign(data.begin() + 8, data.end());
-
-        return in;
+        auto bytes = reinterpret_cast<const uint8_t*>(&var);
+        data.insert(data.end(), bytes, bytes + sizeof(T));
     }
+
+    void discard(size_t n)
+    {
+        data.erase(data.begin(), data.begin() + n);
+    }
+
+    template <typename T>
+    void get(T& var)
+    {
+        std::vector<uint8_t> data{data.begin(), data.begin() + sizeof(T)};
+        var = *reinterpret_cast<T*>(data.data());
+        discard(sizeof(T));
+    }
+
+    void write_to(std::ostream& out)
+    {
+        const auto pkg_size = data.size() + 13;
+        std::vector<uint8_t> serial_data{};
+        serial_data.reserve(pkg_size);
+
+        serial_data.resize(3);
+        serial_data[0] = PKG_START_BYTE;
+        serial_data[1] = static_cast<uint8_t>(pkg_size);
+        serial_data[2] = (static_cast<uint8_t>(pkg_size >> 8) & 0x3) | 0x4;
+        const auto crc_header = crc::crc(CRC_HEADER_INIT, serial_data);
+        serial_data.resize(11);
+        serial_data[3] = crc_header;
+        serial_data[4] = sender;
+        serial_data[5] = receiver;
+        const auto cmd = (static_cast<uint16_t>(cmd_set) << 8) | static_cast<uint16_t>(cmd_id);
+        const auto seq_id = id_tracker::get_instance().get_count_for_id(cmd);
+        serial_data[6] = static_cast<uint8_t>(seq_id);
+        serial_data[7] = static_cast<uint8_t>(seq_id >> 8);
+        serial_data[8] = (is_ack << 7) | (need_ack << 5);
+        serial_data[9] = cmd_set;
+        serial_data[10] = cmd_id;
+        serial_data.insert(serial_data.end(), data.begin(), data.end());
+
+        const auto crc_package = crc::crc(CRC_PACKAGE_INIT, serial_data);
+        serial_data.resize(pkg_size);
+        serial_data[pkg_size - 2] = static_cast<uint8_t>(crc_package);
+        serial_data[pkg_size - 1] = static_cast<uint8_t>(crc_package >> 8);
+
+        out.write(reinterpret_cast<char*>(serial_data.data()), serial_data.size());
+    }
+
+    void read_from(std::istream& in)
+    {
+        while (true)
+        {
+            while (in.get() != PKG_START_BYTE);
+
+            uint8_t length_lsb = in.get();
+            uint8_t length_msb = in.get();
+
+            if (!(length_msb & 0x04))
+            {
+                continue;
+            }
+
+            uint8_t crc_header_parsed = in.get();
+            std::vector<uint8_t> parsed_data{};
+            parsed_data.resize(3);
+            parsed_data[0] = PKG_START_BYTE;
+            parsed_data[1] = length_lsb;
+            parsed_data[2] = length_msb;
+
+            if (crc_header_parsed != crc::crc(CRC_HEADER_INIT, parsed_data))
+            {
+                continue;
+            }
+
+            const auto length_parsed = length_lsb | ((length_msb & 0x03) << 8);
+            parsed_data.resize(length_parsed - 2); // don't consider checksum
+            parsed_data[3] = crc_header_parsed;
+
+            in.read(reinterpret_cast<char*>(&parsed_data[4]), length_parsed - 4 - 2); // don't parse header and checksum
+
+            uint16_t crc_package_parsed;
+            in.read(reinterpret_cast<char*>(&crc_package_parsed), 2);
+
+            // Finished parsing, verify package checksum
+            if (crc_package_parsed != crc::crc(CRC_PACKAGE_INIT, parsed_data))
+            {
+                continue;
+            }
+
+            // now move into package data
+            sender = parsed_data[4];
+            receiver = parsed_data[5];
+            seq_id = *(reinterpret_cast<uint16_t*>(&parsed_data[6]));
+            is_ack = parsed_data[8] & (1 << 7);
+            need_ack = parsed_data[8] & (1 << 5);
+            cmd_set = parsed_data[9];
+            cmd_id = parsed_data[10];
+            data.assign(parsed_data.begin() + 11, parsed_data.end());
+
+            return;
+        }
+    }
+
+    bool is_ack;
+    bool need_ack;
+    uint16_t seq_id;
+    uint8_t sender;
+    uint8_t receiver;
+    uint8_t cmd_set;
+    uint8_t cmd_id;
+
+    std::deque<uint8_t> data;
+};
+
+template <typename T>
+package& operator<<(package& pkg, const T& var)
+{
+    pkg.put(var);
+    return pkg;
 }
+
+template <typename T>
+package& operator>>(package& pkg, T& var)
+{
+    pkg.get(var);
+    return pkg;
+}
+
+std::ostream& operator<<(std::ostream& out, package& p)
+{
+    out << std::hex << std::setw(2) << static_cast<int>(p.sender) << ">" << std::hex << std::setw(2) << static_cast<int>(p.receiver);
+    out << " id=" << std::hex << std::setfill('0') << std::setw(4) << static_cast<int>((p.cmd_set << 8) | p.cmd_id);
+    out << " l=" << std::dec << std::setfill(' ') << std::setw(4) << static_cast<int>(p.data.size());
+    out << " d=";
+
+    for (const auto& val : p.data)
+    {
+        std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(val) << " ";
+    }
+
+    return out;
+}
+
 }
 
