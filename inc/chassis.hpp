@@ -32,7 +32,10 @@ public:
     {
         // w1 fr, w2 fl, w3 bl, w4 br
         robomaster::package pkg{0xC9, 0xC3, 0x3f, 0x20, false, false};
-        pkg << w1 << w2 << w3 << w4;
+        pkg << w1;
+        pkg << static_cast<int16_t>(-w2);
+        pkg << static_cast<int16_t>(-w3);
+        pkg << w4;
         pkg.write_to(_io);
     }
 
