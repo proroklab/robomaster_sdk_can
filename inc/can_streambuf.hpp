@@ -4,6 +4,14 @@
 #include <cstring>
 #include <streambuf>
 
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <poll.h>
+
+#include <linux/can.h>
+#include <linux/can/raw.h>
+
 class can_streambuf : public std::basic_streambuf<char>
 {
 public:
