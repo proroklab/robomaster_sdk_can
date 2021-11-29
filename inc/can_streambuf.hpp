@@ -1,9 +1,11 @@
-#include <vector>
+#pragma once
+
 #include <string>
 #include <exception>
-#include <cstring>
 #include <streambuf>
-
+#include <stdio.h>
+#include <cstring>
+#include <unistd.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>

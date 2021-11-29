@@ -1,11 +1,12 @@
+#pragma once
+
 #include <vector>
-#include <string>
 #include <exception>
-#include <cstring>
 #include <streambuf>
-#include <thread>
 #include <deque>
 #include <map>
+
+#include <cstring>
 
 #include <iomanip>
 #include <crc.hpp>
