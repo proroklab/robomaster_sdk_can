@@ -17,6 +17,8 @@ int main(int, char**)
     std::iostream io(&can);
     robomaster::command::chassis chassis(io);
 
+    chassis.send_workmode(1);
+
     while (true)
     {
         chassis.send_heartbeat();

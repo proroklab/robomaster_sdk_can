@@ -28,6 +28,13 @@ public:
         p_heartbeat.write_to(_io);
     }
 
+    void send_workmode(uint8_t mode)
+    {
+        robomaster::package pkg{0x09, 0xC3, 0x3f, 0x19, false, false};
+        pkg << mode;
+        pkg.write_to(_io);
+    }
+
     void send_wheel_speed(int16_t w1, int16_t w2, int16_t w3, int16_t w4)
     {
         // w1 fr, w2 fl, w3 bl, w4 br
