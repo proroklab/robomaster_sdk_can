@@ -220,14 +220,20 @@ package& operator>>(package& pkg, T& var)
 
 std::ostream& operator<<(std::ostream& out, package& p)
 {
-    out << std::hex << std::setw(2) << static_cast<int>(p.sender) << ">" << std::hex << std::setw(2) << static_cast<int>(p.receiver);
-    out << " id=" << std::hex << std::setfill('0') << std::setw(4) << static_cast<int>((p.cmd_set << 8) | p.cmd_id);
+    out << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(p.sender) << ">" << std::hex << std::setw(2) << static_cast<int>(p.receiver);
+    out << " [" << std::hex << std::setfill('0') << std::setw(4) << static_cast<int>((p.cmd_set << 8) | p.cmd_id) << "]";
+    out << (p.is_ack ? "+" : " ");
+    out << (p.need_ack ? "!" : " ");
     out << " l=" << std::dec << std::setfill(' ') << std::setw(4) << static_cast<int>(p.data.size());
-    out << " d=";
 
-    for (const auto& val : p.data)
+    if (!p.data.empty())
     {
-        std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(val) << " ";
+        out << " d=";
+
+        for (const auto& val : p.data)
+        {
+            std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(val) << " ";
+        }
     }
 
     return out;
