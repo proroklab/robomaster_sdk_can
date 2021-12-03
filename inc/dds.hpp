@@ -96,8 +96,8 @@ struct velocity : public subject
     velocity(package& p)
         : subject(p)
     {
-        p >> vgx >> vgx >> vgz;
-        p >> vbx >> vbx >> vbz;
+        p >> vgx >> vgy >> vgz;
+        p >> vbx >> vby >> vbz;
     }
     float vgx, vgy, vgz;
     float vbx, vby, vbz;
