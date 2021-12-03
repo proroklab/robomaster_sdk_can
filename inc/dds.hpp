@@ -119,7 +119,10 @@ public:
         , _out{out}
         , _sender{BASE_ID}
         , _receiver{SUBCONTROLLER_ID}
-    {}
+        , _runner{std::bind(&robomaster::dds::dds::process_incoming, this)}
+    {
+        _runner.detach();
+    }
 
     void subscribe(std::function<void(const struct imu&)> callback, uint8_t frequency)
     {
@@ -146,25 +149,28 @@ public:
         subscribe(callback, frequency, {0x66, 0x3e, 0x3e, 0x4c, 0x03, 0x00, 0x02, 0x00});
     }
 
-    void run()
+private:
+    void process_incoming()
     {
-        robomaster::package p{};
-        p.read_from(_in);
-
-        if (p.sender == _receiver && p.receiver == _sender && p.cmd_set == CMDSET_DDS && p.cmd_id == CMDID_DDS_PUSH_MSG)
+        while (true)
         {
-            uint8_t sub_mode;
-            uint8_t msg_id;
-            p >> sub_mode >> msg_id;
+            robomaster::package p{};
+            p.read_from(_in);
 
-            if (msg_id < _subscriptions.size())
+            if (p.sender == _receiver && p.receiver == _sender && p.cmd_set == CMDSET_DDS && p.cmd_id == CMDID_DDS_PUSH_MSG)
             {
-                _subscriptions[msg_id](p);
+                uint8_t sub_mode;
+                uint8_t msg_id;
+                p >> sub_mode >> msg_id;
+
+                if (msg_id < _subscriptions.size())
+                {
+                    _subscriptions[msg_id](p);
+                }
             }
         }
     }
 
-private:
     template<class T>
     void subscribe(std::function<void(const T&)> callback, uint8_t frequency, const std::array<uint8_t, 8> subscriber_uid)
     {
@@ -215,6 +221,8 @@ private:
     const uint8_t _receiver;
 
     std::vector<std::function<void(package&)>> _subscriptions;
+
+    std::thread _runner;
 };
 
 }

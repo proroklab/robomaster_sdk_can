@@ -5,6 +5,9 @@
 #include <iostream>
 #include <fcntl.h>
 
+#include <chrono>
+#include <thread>
+
 #include <can_streambuf.hpp>
 #include <crc.hpp>
 #include <robomaster_protocol.hpp>
@@ -12,7 +15,7 @@
 
 void cb_imu(const struct robomaster::dds::imu& imu)
 {
-    std::cout << "IMU " << imu.yaw << "\n";
+    std::cout << "IMU " << imu.roll << " "  << imu.pitch << " " << imu.yaw << "\n";
 }
 
 void cb_wheel_enc(const struct robomaster::dds::wheel_encoders& wheel_encoders)
@@ -51,7 +54,7 @@ int main(int, char**)
 
     while (true)
     {
-        dds.run();
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     return 0;
