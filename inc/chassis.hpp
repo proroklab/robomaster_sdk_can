@@ -1,11 +1,96 @@
 #pragma once
 
-#include <vector>
-
 #include <robomaster_protocol.hpp>
+#include <dds.hpp>
 
 namespace robomaster
 {
+namespace dds
+{
+struct imu
+{
+    imu(package& p)
+    {
+        p >> yaw >> pitch >> roll;
+    }
+
+    float yaw, pitch, roll;
+};
+template <> constexpr std::array<uint8_t, 8> get_uid<imu>()
+{
+    return {0x42, 0xee, 0x13, 0x1d, 0x03, 0x00, 0x02, 0x00};
+}
+
+struct wheel_encoders
+{
+    wheel_encoders(package& p)
+    {
+        p >> rpm[0] >> rpm[1] >> rpm[2] >> rpm[3];
+        p >> enc[0] >> enc[1] >> enc[2] >> enc[3];
+        p >> timer[0] >> timer[1] >> timer[2] >> timer[3];
+        p >> state[0] >> state[1] >> state[2] >> state[3];
+    }
+
+    int16_t rpm[4];
+    uint16_t enc[4];
+    uint32_t timer[4];
+    uint8_t state[4];
+};
+template <> constexpr std::array<uint8_t, 8> get_uid<wheel_encoders>()
+{
+    return {0x09, 0xa3, 0x26, 0xe2, 0x03, 0x00, 0x02, 0x00};
+}
+
+struct acc_gyro
+{
+    acc_gyro(package& p)
+    {
+        p >> acc_x >> acc_y >> acc_z;
+        p >> gyr_x >> gyr_y >> gyr_z;
+    }
+
+    float acc_x, acc_y, acc_z;
+    float gyr_x, gyr_y, gyr_z;
+};
+template <> constexpr std::array<uint8_t, 8> get_uid<acc_gyro>()
+{
+    return {0xf4, 0x1d, 0x1c, 0xdc, 0x03, 0x00, 0x02, 0x00};
+}
+
+struct battery
+{
+    battery(package& p)
+    {
+        p >> adc_val >> temperature >> current >> percent;
+    }
+
+    uint16_t adc_val;
+    int16_t temperature;
+    int32_t current;
+    uint8_t percent;
+};
+template <> constexpr std::array<uint8_t, 8> get_uid<battery>()
+{
+    return {0xfb, 0xdc, 0xf5, 0xd7, 0x03, 0x00, 0x02, 0x00};
+}
+
+struct velocity
+{
+    velocity(package& p)
+    {
+        p >> vgx >> vgy >> vgz;
+        p >> vbx >> vby >> vbz;
+    }
+    float vgx, vgy, vgz;
+    float vbx, vby, vbz;
+};
+template <> constexpr std::array<uint8_t, 8> get_uid<velocity>()
+{
+    return {0x66, 0x3e, 0x3e, 0x4c, 0x03, 0x00, 0x02, 0x00};
+}
+
+}
+
 namespace command
 {
 class chassis

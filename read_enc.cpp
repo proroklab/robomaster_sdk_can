@@ -12,6 +12,7 @@
 #include <crc.hpp>
 #include <robomaster_protocol.hpp>
 #include <dds.hpp>
+#include <chassis.hpp>
 
 using robomaster::dds::metadata;
 using robomaster::dds::imu;
@@ -20,17 +21,17 @@ using robomaster::dds::acc_gyro;
 using robomaster::dds::battery;
 using robomaster::dds::velocity;
 
-void cb_imu(const metadata&, const struct imu& imu)
+void cb_imu(const metadata&, const imu& imu)
 {
     std::cout << "IMU " << imu.roll << " "  << imu.pitch << " " << imu.yaw << "\n";
 }
 
-void cb_wheel_enc(const metadata&, const struct wheel_encoders& wheel_encoders)
+void cb_wheel_enc(const metadata&, const wheel_encoders& wheel_encoders)
 {
     std::cout << "ENC RPM " << static_cast<int>(wheel_encoders.rpm[0]) << "\n";
 }
 
-void cb_acc_gyro(const metadata&, const struct acc_gyro& acc_gyro)
+void cb_acc_gyro(const metadata&, const acc_gyro& acc_gyro)
 {
     std::cout << "GYRO " << acc_gyro.gyr_x << "\n";
 }
