@@ -7,16 +7,16 @@ namespace robomaster
 {
 namespace dds
 {
-struct imu
+struct attitude
 {
-    imu(package& p)
+    attitude(package& p)
     {
         p >> yaw >> pitch >> roll;
     }
 
     float yaw, pitch, roll;
 };
-template <> constexpr std::array<uint8_t, 8> get_uid<imu>()
+template <> constexpr std::array<uint8_t, 8> get_uid<attitude>()
 {
     return {0x42, 0xee, 0x13, 0x1d, 0x03, 0x00, 0x02, 0x00};
 }
@@ -41,9 +41,9 @@ template <> constexpr std::array<uint8_t, 8> get_uid<wheel_encoders>()
     return {0x09, 0xa3, 0x26, 0xe2, 0x03, 0x00, 0x02, 0x00};
 }
 
-struct acc_gyro
+struct imu
 {
-    acc_gyro(package& p)
+    imu(package& p)
     {
         p >> acc_x >> acc_y >> acc_z;
         p >> gyr_x >> gyr_y >> gyr_z;
@@ -52,7 +52,7 @@ struct acc_gyro
     float acc_x, acc_y, acc_z;
     float gyr_x, gyr_y, gyr_z;
 };
-template <> constexpr std::array<uint8_t, 8> get_uid<acc_gyro>()
+template <> constexpr std::array<uint8_t, 8> get_uid<imu>()
 {
     return {0xf4, 0x1d, 0x1c, 0xdc, 0x03, 0x00, 0x02, 0x00};
 }

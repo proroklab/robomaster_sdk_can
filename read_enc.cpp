@@ -15,15 +15,15 @@
 #include <chassis.hpp>
 
 using robomaster::dds::metadata;
-using robomaster::dds::imu;
+using robomaster::dds::attitude;
 using robomaster::dds::wheel_encoders;
-using robomaster::dds::acc_gyro;
+using robomaster::dds::imu;
 using robomaster::dds::battery;
 using robomaster::dds::velocity;
 
-void cb_imu(const metadata&, const imu& imu)
+void cb_attitude(const metadata&, const attitude& attitude)
 {
-    std::cout << "IMU " << imu.roll << " "  << imu.pitch << " " << imu.yaw << "\n";
+    std::cout << "Attitude " << attitude.roll << " "  << attitude.pitch << " " << attitude.yaw << "\n";
 }
 
 void cb_wheel_enc(const metadata&, const wheel_encoders& wheel_encoders)
@@ -31,9 +31,9 @@ void cb_wheel_enc(const metadata&, const wheel_encoders& wheel_encoders)
     std::cout << "ENC RPM " << static_cast<int>(wheel_encoders.rpm[0]) << "\n";
 }
 
-void cb_acc_gyro(const metadata&, const acc_gyro& acc_gyro)
+void cb_imu(const metadata&, const imu& imu)
 {
-    std::cout << "GYRO " << acc_gyro.gyr_x << "\n";
+    std::cout << "GYRO " << imu.gyr_x << "\n";
 }
 
 void cb_bat(const metadata&, const battery& battery)
@@ -51,9 +51,9 @@ class test
 public:
     test() {}
 
-    void cb_vel(const metadata& meta, const imu& imu, const battery& battery)
+    void cb_vel(const metadata& meta, const attitude& attitude, const battery& battery)
     {
-        std::cout << "t " << meta.time_ns << "Vel cls " << imu.yaw << "\n";
+        std::cout << "t " << meta.time_ns << "Vel cls " << attitude.yaw << " bat " << battery.percent << "\n";
     }
 };
 
@@ -71,10 +71,10 @@ int main(int, char**)
 
     test tst{};
 
-    dds.subscribe(std::function<void(const metadata&, const imu&, const battery&)>(std::bind(&test::cb_vel, tst, _1, _2, _3)), 20);
-    dds.subscribe(std::function<void(const metadata&, const imu&)>(cb_imu), 20);
+    dds.subscribe(std::function<void(const metadata&, const attitude&, const battery&)>(std::bind(&test::cb_vel, tst, _1, _2, _3)), 20);
+    dds.subscribe(std::function<void(const metadata&, const attitude&)>(cb_attitude), 20);
     dds.subscribe(std::function<void(const metadata&, const wheel_encoders&)>(cb_wheel_enc), 20);
-    dds.subscribe(std::function<void(const metadata&, const acc_gyro&)>(cb_acc_gyro), 20);
+    dds.subscribe(std::function<void(const metadata&, const imu&)>(cb_imu), 20);
     dds.subscribe(std::function<void(const metadata&, const velocity&)>(cb_vel), 20);
     dds.subscribe(std::function<void(const metadata&, const battery&)>(cb_bat), 1);
     out.flush();
