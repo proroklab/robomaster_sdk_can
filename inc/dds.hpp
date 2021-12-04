@@ -26,9 +26,9 @@ namespace robomaster
 namespace dds
 {
 
-struct subject
+struct metadata
 {
-    subject(package& p)
+    metadata(package& p)
     {
         p >> time_ms >> time_ns;
     }
@@ -36,10 +36,9 @@ struct subject
     uint32_t time_ms, time_ns;
 };
 
-struct imu : public subject
+struct imu
 {
     imu(package& p)
-        : subject(p)
     {
         p >> yaw >> pitch >> roll;
     }
@@ -47,10 +46,9 @@ struct imu : public subject
     float yaw, pitch, roll;
 };
 
-struct wheel_encoders : public subject
+struct wheel_encoders
 {
     wheel_encoders(package& p)
-        : subject(p)
     {
         p >> rpm[0] >> rpm[1] >> rpm[2] >> rpm[3];
         p >> enc[0] >> enc[1] >> enc[2] >> enc[3];
@@ -64,10 +62,9 @@ struct wheel_encoders : public subject
     uint8_t state[4];
 };
 
-struct acc_gyro : public subject
+struct acc_gyro
 {
     acc_gyro(package& p)
-        : subject(p)
     {
         p >> acc_x >> acc_y >> acc_z;
         p >> gyr_x >> gyr_y >> gyr_z;
@@ -77,10 +74,9 @@ struct acc_gyro : public subject
     float gyr_x, gyr_y, gyr_z;
 };
 
-struct battery : public subject
+struct battery
 {
     battery(package& p)
-        : subject(p)
     {
         p >> adc_val >> temperature >> current >> percent;
     }
@@ -91,10 +87,9 @@ struct battery : public subject
     uint8_t percent;
 };
 
-struct velocity : public subject
+struct velocity
 {
     velocity(package& p)
-        : subject(p)
     {
         p >> vgx >> vgy >> vgz;
         p >> vbx >> vby >> vbz;
@@ -146,15 +141,15 @@ public:
         _runner.detach();
     }
 
-    template<class T>
-    void subscribe(std::function<void(const T&)> callback, uint8_t frequency)
+    template<class ...args>
+    void subscribe(std::function<void(const metadata&, const args& ...)> callback, uint8_t frequency)
     {
         const auto msg_id = _subscriptions.size();
         send_remove_sub(_sender, 0, msg_id);
-        send_add_sub({get_uid<T>()}, 0, msg_id, frequency);
+        send_add_sub({get_uid<args>()...}, 0, msg_id, frequency);
         _subscriptions.emplace_back([callback](package & p)
         {
-            callback(T{p});
+            callback(metadata{p}, args{p}...);
         });
     }
 
