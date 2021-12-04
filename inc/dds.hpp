@@ -103,6 +103,28 @@ struct velocity : public subject
     float vbx, vby, vbz;
 };
 
+template <typename T> constexpr std::array<uint8_t, 8> get_uid();
+template <> constexpr std::array<uint8_t, 8> get_uid<wheel_encoders>()
+{
+    return {0x09, 0xa3, 0x26, 0xe2, 0x03, 0x00, 0x02, 0x00};
+}
+template <> constexpr std::array<uint8_t, 8> get_uid<imu>()
+{
+    return {0x42, 0xee, 0x13, 0x1d, 0x03, 0x00, 0x02, 0x00};
+}
+template <> constexpr std::array<uint8_t, 8> get_uid<acc_gyro>()
+{
+    return {0xf4, 0x1d, 0x1c, 0xdc, 0x03, 0x00, 0x02, 0x00};
+}
+template <> constexpr std::array<uint8_t, 8> get_uid<battery>()
+{
+    return {0xfb, 0xdc, 0xf5, 0xd7, 0x03, 0x00, 0x02, 0x00};
+}
+template <> constexpr std::array<uint8_t, 8> get_uid<velocity>()
+{
+    return {0x66, 0x3e, 0x3e, 0x4c, 0x03, 0x00, 0x02, 0x00};
+}
+
 constexpr static uint8_t BASE_ID = 0x09;
 constexpr static uint8_t SUBCONTROLLER_ID = 0x03;
 constexpr static uint8_t CMDSET_DDS = 0x48;
@@ -124,29 +146,16 @@ public:
         _runner.detach();
     }
 
-    void subscribe(std::function<void(const struct imu&)> callback, uint8_t frequency)
+    template<class T>
+    void subscribe(std::function<void(const T&)> callback, uint8_t frequency)
     {
-        subscribe(callback, frequency, {0x42, 0xee, 0x13, 0x1d, 0x03, 0x00, 0x02, 0x00});
-    }
-
-    void subscribe(std::function<void(const struct wheel_encoders&)> callback, uint8_t frequency)
-    {
-        subscribe(callback, frequency, {0x09, 0xa3, 0x26, 0xe2, 0x03, 0x00, 0x02, 0x00});
-    }
-
-    void subscribe(std::function<void(const struct acc_gyro&)> callback, uint8_t frequency)
-    {
-        subscribe(callback, frequency, {0xf4, 0x1d, 0x1c, 0xdc, 0x03, 0x00, 0x02, 0x00});
-    }
-
-    void subscribe(std::function<void(const struct battery&)> callback, uint8_t frequency)
-    {
-        subscribe(callback, frequency, {0xfb, 0xdc, 0xf5, 0xd7, 0x03, 0x00, 0x02, 0x00});
-    }
-
-    void subscribe(std::function<void(const struct velocity&)> callback, uint8_t frequency)
-    {
-        subscribe(callback, frequency, {0x66, 0x3e, 0x3e, 0x4c, 0x03, 0x00, 0x02, 0x00});
+        const auto msg_id = _subscriptions.size();
+        send_remove_sub(_sender, 0, msg_id);
+        send_add_sub({get_uid<T>()}, 0, msg_id, frequency);
+        _subscriptions.emplace_back([callback](package & p)
+        {
+            callback(T{p});
+        });
     }
 
 private:
@@ -169,18 +178,6 @@ private:
                 }
             }
         }
-    }
-
-    template<class T>
-    void subscribe(std::function<void(const T&)> callback, uint8_t frequency, const std::array<uint8_t, 8> subscriber_uid)
-    {
-        const auto msg_id = _subscriptions.size();
-        send_remove_sub(_sender, 0, msg_id);
-        send_add_sub({subscriber_uid}, 0, msg_id, frequency);
-        _subscriptions.emplace_back([callback](package & p)
-        {
-            callback(T{p});
-        });
     }
 
     void send_add_sub(const std::vector<std::array<uint8_t, 8>>& subscriber_uids, uint8_t sub_mode, uint8_t msg_id, uint16_t frequency)
