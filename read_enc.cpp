@@ -10,7 +10,7 @@
 
 #include <can_streambuf.hpp>
 #include <crc.hpp>
-#include <robomaster_protocol.hpp>
+#include <protocol.hpp>
 #include <dds.hpp>
 #include <chassis.hpp>
 

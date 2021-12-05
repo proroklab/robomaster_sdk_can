@@ -1,6 +1,6 @@
 #pragma once
 
-#include <robomaster_protocol.hpp>
+#include <protocol.hpp>
 #include <dds.hpp>
 
 namespace robomaster

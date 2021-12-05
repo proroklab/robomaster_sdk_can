@@ -1,8 +1,6 @@
 #pragma once
 
-#include <vector>
-
-#include <robomaster_protocol.hpp>
+#include <protocol.hpp>
 
 namespace robomaster
 {
