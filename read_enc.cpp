@@ -53,7 +53,7 @@ public:
 
     void cb_vel(const metadata& meta, const attitude& attitude, const battery& battery)
     {
-        std::cout << "t " << meta.time_ns << "Vel cls " << attitude.yaw << " bat " << battery.percent << "\n";
+        std::cout << "t " << meta.time_ns << "Vel cls " << attitude.yaw << " bat " << static_cast<int>(battery.percent) << std::endl;
     }
 };
 
