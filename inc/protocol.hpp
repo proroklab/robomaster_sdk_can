@@ -101,8 +101,8 @@ public:
     template <typename T>
     void get(T& var)
     {
-        std::vector<uint8_t> data{data.begin(), data.begin() + sizeof(T)};
-        var = *reinterpret_cast<T*>(data.data());
+        std::vector<uint8_t> d{data.begin(), data.begin() + sizeof(T)};
+        var = *reinterpret_cast<T*>(d.data());
         discard(sizeof(T));
     }
 
