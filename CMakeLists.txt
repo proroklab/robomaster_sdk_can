@@ -13,6 +13,7 @@ add_library(robomaster_comm STATIC
         src/protocol.cpp
         src/dds.cpp
         src/chassis.cpp
+        src/gimbal.cpp
         src/led.cpp
         src/can_streambuf.cpp
         )
