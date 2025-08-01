@@ -1,21 +1,15 @@
 #include <iostream>
-
-#include <can_streambuf.hpp>
-#include <chassis.hpp>
-
-
 #include <chrono>
 #include <thread>
 
-#include <deque>
-
-#include <iomanip>
+#include <robomaster/can_streambuf.hpp>
+#include <robomaster/chassis.hpp>
 
 int main(int, char**)
 {
-    auto can = can_streambuf("can0", 0x201);
+    auto can = robomaster::can_streambuf("can0", 0x201);
     std::iostream io(&can);
-    robomaster::command::chassis chassis(io);
+    robomaster::chassis chassis(io);
 
     chassis.send_workmode(1);
 
@@ -28,4 +22,3 @@ int main(int, char**)
 
     return 0;
 }
-

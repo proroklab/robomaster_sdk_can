@@ -1,11 +1,9 @@
-#pragma once
+#include <robomaster/crc.hpp>
 
-#include <cstdint>
-#include <vector>
-
-namespace crc
+namespace robomaster
 {
-constexpr static uint8_t CRC8_TABLE[256] =
+
+static const uint8_t CRC8_TABLE[256] =
 {
     0x00, 0x5e, 0xbc, 0xe2, 0x61, 0x3f, 0xdd, 0x83, 0xc2, 0x9c, 0x7e, 0x20, 0xa3, 0xfd, 0x1f, 0x41,
     0x9d, 0xc3, 0x21, 0x7f, 0xfc, 0xa2, 0x40, 0x1e, 0x5f, 0x01, 0xe3, 0xbd, 0x3e, 0x60, 0x82, 0xdc,
@@ -25,7 +23,7 @@ constexpr static uint8_t CRC8_TABLE[256] =
     0x74, 0x2a, 0xc8, 0x96, 0x15, 0x4b, 0xa9, 0xf7, 0xb6, 0xe8, 0x0a, 0x54, 0xd7, 0x89, 0x6b, 0x35
 };
 
-constexpr static uint16_t CRC16_TABLE[256] =
+static const uint16_t CRC16_TABLE[256] =
 {
     0x0000, 0x1189, 0x2312, 0x329b, 0x4624, 0x57ad, 0x6536, 0x74bf,
     0x8c48, 0x9dc1, 0xaf5a, 0xbed3, 0xca6c, 0xdbe5, 0xe97e, 0xf8f7,
@@ -61,27 +59,28 @@ constexpr static uint16_t CRC16_TABLE[256] =
     0x7bc7, 0x6a4e, 0x58d5, 0x495c, 0x3de3, 0x2c6a, 0x1ef1, 0x0f78
 };
 
-uint8_t crc(const uint8_t seed, const std::vector<uint8_t>& data)
+uint8_t crc8(uint8_t seed, const std::vector<uint8_t>& data)
 {
     uint8_t crc = seed;
 
     for (const auto& d : data)
     {
-        crc = CRC8_TABLE[crc ^ d];
+        crc = CRC8_TABLE[crc^ d];
     }
 
     return crc;
 }
 
-uint16_t crc(const uint16_t seed, const std::vector<uint8_t>& data)
+uint16_t crc16(uint16_t seed, const std::vector<uint8_t>& data)
 {
     uint16_t crc = seed;
 
     for (const auto& d : data)
     {
-        crc = (crc >> 8) ^ CRC16_TABLE[static_cast<uint8_t>((crc ^ d) & 0x00ff)];
+        crc = (crc >> 8)^ CRC16_TABLE[static_cast<uint8_t>((crc^ d) & 0x00ff)];
     }
 
     return crc;
 }
-}
+
+} // namespace robomaster

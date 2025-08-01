@@ -1,36 +1,31 @@
-#pragma once
+#include <robomaster/protocol.hpp>
+#include <robomaster/crc.hpp>
 
-#include <vector>
-#include <exception>
-#include <streambuf>
-#include <deque>
 #include <map>
-
-#include <cstring>
-
 #include <iomanip>
 #include <iostream>
-#include <crc.cpp>
 
 namespace robomaster
 {
 
-constexpr static uint8_t PKG_START_BYTE = 0x55;
-constexpr static uint8_t CRC_HEADER_INIT = 119;
-constexpr static uint16_t CRC_PACKAGE_INIT = 13970;
+    static constexpr uint8_t PKG_START_BYTE = 0x55;
+    static constexpr uint8_t CRC_HEADER_INIT = 119;
+    static constexpr uint16_t CRC_PACKAGE_INIT = 13970;
 
-class id_tracker
-{
-public:
-    id_tracker() {}
+    protocol_error::protocol_error(const std::string& message) : message_(message) {}
 
-    unsigned int get_count_for_id(uint16_t id)
+    const char* protocol_error::what() const noexcept
     {
-        const auto it = _seq_id_counts.find(id);
+        return message_.c_str();
+    }
 
-        if (it == _seq_id_counts.end())
+    unsigned int id_tracker::get_count_for_id(uint16_t id)
+    {
+        const auto it = seq_id_counts_.find(id);
+
+        if (it == seq_id_counts_.end())
         {
-            _seq_id_counts[id] = 0;
+            seq_id_counts_[id] = 0;
             return 0;
         }
         else
@@ -41,21 +36,13 @@ public:
         }
     }
 
-    static id_tracker& get_instance()
+    id_tracker& id_tracker::get_instance()
     {
         static id_tracker instance;
         return instance;
     }
 
-private:
-    std::map<uint16_t, unsigned int> _seq_id_counts;
-
-};
-
-class package
-{
-public:
-    package()
+    package::package()
         : is_ack{false}
         , need_ack{false}
         , seq_id{0}
@@ -63,10 +50,18 @@ public:
         , receiver{0}
         , cmd_set{0}
         , cmd_id{0}
-        , data{}
-    {}
+        , data{} {}
 
-    package(uint8_t sender, uint8_t receiver, uint8_t cmd_set, uint8_t cmd_id, bool is_ack, bool need_ack)
+    package::package(uint8_t sender, uint8_t receiver, uint8_t cmd_set, uint8_t cmd_id, bool is_ack, bool need_ack)
+        : is_ack{is_ack}
+        , need_ack{need_ack}
+        , seq_id{0}
+        , sender{sender}
+        , receiver{receiver}
+        , cmd_set{cmd_set}
+        , cmd_id{cmd_id} {}
+
+    package::package(uint8_t sender, uint8_t receiver, uint8_t cmd_set, uint8_t cmd_id, bool is_ack, bool need_ack, const std::deque<uint8_t>& data)
         : is_ack{is_ack}
         , need_ack{need_ack}
         , seq_id{0}
@@ -74,40 +69,19 @@ public:
         , receiver{receiver}
         , cmd_set{cmd_set}
         , cmd_id{cmd_id}
-    {}
+        , data{data} {}
 
-    package(uint8_t sender, uint8_t receiver, uint8_t cmd_set, uint8_t cmd_id, bool is_ack, bool need_ack, const std::deque<uint8_t>& data)
-        : is_ack{is_ack}
-        , need_ack{need_ack}
-        , seq_id{0}
-        , sender{sender}
-        , receiver{receiver}
-        , cmd_set{cmd_set}
-        , cmd_id{cmd_id}
-        , data{data}
-    {}
-
-    template <typename T>
-    void put(const T var)
+    void package::discard(size_t n)
     {
-        auto bytes = reinterpret_cast<const uint8_t*>(&var);
-        data.insert(data.end(), bytes, bytes + sizeof(T));
-    }
+        if (n > data.size())
+        {
+            throw protocol_error("Cannot discard more bytes than available");
+        }
 
-    void discard(size_t n)
-    {
         data.erase(data.begin(), data.begin() + n);
     }
 
-    template <typename T>
-    void get(T& var)
-    {
-        std::vector<uint8_t> d{data.begin(), data.begin() + sizeof(T)};
-        var = *reinterpret_cast<T*>(d.data());
-        discard(sizeof(T));
-    }
-
-    void write_to(std::ostream& out)
+    void package::write_to(std::ostream& out)
     {
         const auto pkg_size = data.size() + 13;
         std::vector<uint8_t> serial_data{};
@@ -117,11 +91,13 @@ public:
         serial_data[0] = PKG_START_BYTE;
         serial_data[1] = static_cast<uint8_t>(pkg_size);
         serial_data[2] = (static_cast<uint8_t>(pkg_size >> 8) & 0x3) | 0x4;
-        const auto crc_header = crc::crc(CRC_HEADER_INIT, serial_data);
+
+        const auto crc_header = crc8(CRC_HEADER_INIT, serial_data);
         serial_data.resize(11);
         serial_data[3] = crc_header;
         serial_data[4] = sender;
         serial_data[5] = receiver;
+
         const auto cmd = (static_cast<uint16_t>(cmd_set) << 8) | static_cast<uint16_t>(cmd_id);
         const auto seq_id = id_tracker::get_instance().get_count_for_id(cmd);
         serial_data[6] = static_cast<uint8_t>(seq_id);
@@ -131,7 +107,7 @@ public:
         serial_data[10] = cmd_id;
         serial_data.insert(serial_data.end(), data.begin(), data.end());
 
-        const auto crc_package = crc::crc(CRC_PACKAGE_INIT, serial_data);
+        const auto crc_package = crc16(CRC_PACKAGE_INIT, serial_data);
         serial_data.resize(pkg_size);
         serial_data[pkg_size - 2] = static_cast<uint8_t>(crc_package);
         serial_data[pkg_size - 1] = static_cast<uint8_t>(crc_package >> 8);
@@ -139,7 +115,7 @@ public:
         out.write(reinterpret_cast<char*>(serial_data.data()), serial_data.size());
     }
 
-    void read_from(std::istream& in)
+    void package::read_from(std::istream& in)
     {
         while (true)
         {
@@ -160,7 +136,7 @@ public:
             parsed_data[1] = length_lsb;
             parsed_data[2] = length_msb;
 
-            if (crc_header_parsed != crc::crc(CRC_HEADER_INIT, parsed_data))
+            if (crc_header_parsed != crc8(CRC_HEADER_INIT, parsed_data))
             {
                 continue;
             }
@@ -175,7 +151,7 @@ public:
             in.read(reinterpret_cast<char*>(&crc_package_parsed), 2);
 
             // Finished parsing, verify package checksum
-            if (crc_package_parsed != crc::crc(CRC_PACKAGE_INIT, parsed_data))
+            if (crc_package_parsed != crc16(CRC_PACKAGE_INIT, parsed_data))
             {
                 continue;
             }
@@ -183,7 +159,7 @@ public:
             // now move into package data
             sender = parsed_data[4];
             receiver = parsed_data[5];
-            seq_id = *(reinterpret_cast<uint16_t*>(&parsed_data[6]));
+            seq_id = *reinterpret_cast<uint16_t*>(&parsed_data[6]);
             is_ack = parsed_data[8] & (1 << 7);
             need_ack = parsed_data[8] & (1 << 5);
             cmd_set = parsed_data[9];
@@ -194,34 +170,10 @@ public:
         }
     }
 
-    bool is_ack;
-    bool need_ack;
-    uint16_t seq_id;
-    uint8_t sender;
-    uint8_t receiver;
-    uint8_t cmd_set;
-    uint8_t cmd_id;
-
-    std::deque<uint8_t> data;
-};
-
-template <typename T>
-package& operator<<(package& pkg, const T& var)
-{
-    pkg.put(var);
-    return pkg;
-}
-
-template <typename T>
-package& operator>>(package& pkg, T& var)
-{
-    pkg.get(var);
-    return pkg;
-}
-
 std::ostream& operator<<(std::ostream& out, package& p)
 {
-    out << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(p.sender) << ">" << std::hex << std::setw(2) << static_cast<int>(p.receiver);
+    out << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(p.sender) << ">"
+        << std::hex << std::setw(2) << static_cast<int>(p.receiver);
     out << " [" << std::hex << std::setfill('0') << std::setw(4) << static_cast<int>((p.cmd_set << 8) | p.cmd_id) << "]";
     out << (p.is_ack ? "+" : " ");
     out << (p.need_ack ? "!" : " ");
@@ -233,12 +185,11 @@ std::ostream& operator<<(std::ostream& out, package& p)
 
         for (const auto& val : p.data)
         {
-            std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(val) << " ";
+            out << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(val) << " ";
         }
     }
 
     return out;
 }
 
-}
-
+} // namespace robomaster

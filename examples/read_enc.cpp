@@ -1,29 +1,22 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
 #include <iostream>
-#include <fcntl.h>
-
 #include <chrono>
 #include <thread>
+#include <functional>
 
-#include <can_streambuf.cpp>
-#include <crc.cpp>
-#include <protocol.cpp>
-#include <dds.cpp>
-#include <chassis.cpp>
+#include <robomaster/can_streambuf.hpp>
+#include <robomaster/dds.hpp>
+#include <robomaster/chassis.hpp>
 
-using robomaster::dds::metadata;
-using robomaster::dds::attitude;
-using robomaster::dds::wheel_encoders;
-using robomaster::dds::imu;
-using robomaster::dds::battery;
-using robomaster::dds::velocity;
+using robomaster::metadata;
+using robomaster::attitude;
+using robomaster::wheel_encoders;
+using robomaster::imu;
+using robomaster::battery;
+using robomaster::velocity;
 
 void cb_attitude(const metadata&, const attitude& attitude)
 {
-    std::cout << "Attitude " << attitude.roll << " "  << attitude.pitch << " " << attitude.yaw << "\n";
+    std::cout << "Attitude " << attitude.roll << " " << attitude.pitch << " " << attitude.yaw << "\n";
 }
 
 void cb_wheel_enc(const metadata&, const wheel_encoders& wheel_encoders)
@@ -53,7 +46,8 @@ public:
 
     void cb_vel(const metadata& meta, const attitude& attitude, const battery& battery)
     {
-        std::cout << "t " << meta.time_ns << "Vel cls " << attitude.yaw << " bat " << static_cast<int>(battery.percent) << std::endl;
+        std::cout << "t " << meta.time_ns << " Vel cls " << attitude.yaw
+            << " bat " << static_cast<int>(battery.percent) << std::endl;
     }
 };
 
@@ -63,15 +57,16 @@ using std::placeholders::_3;
 
 int main(int, char**)
 {
-    auto can_in = can_streambuf("can0", 0x202);
-    auto can_cfg = can_streambuf("can0", 0x201);
+    auto can_in = robomaster::can_streambuf("can0", 0x202);
+    auto can_cfg = robomaster::can_streambuf("can0", 0x201);
     std::iostream in(&can_in);
     std::iostream out(&can_cfg);
-    robomaster::dds::dds dds(in, out);
+    robomaster::dds dds(in, out);
 
     test tst{};
 
-    dds.subscribe(std::function<void(const metadata&, const attitude&, const battery&)>(std::bind(&test::cb_vel, tst, _1, _2, _3)), 20);
+    dds.subscribe(std::function<void(const metadata&, const attitude&, const battery&)>(
+        std::bind(&test::cb_vel, tst, _1, _2, _3)), 20);
     dds.subscribe(std::function<void(const metadata&, const attitude&)>(cb_attitude), 20);
     dds.subscribe(std::function<void(const metadata&, const wheel_encoders&)>(cb_wheel_enc), 20);
     dds.subscribe(std::function<void(const metadata&, const imu&)>(cb_imu), 20);
@@ -86,4 +81,3 @@ int main(int, char**)
 
     return 0;
 }
-
