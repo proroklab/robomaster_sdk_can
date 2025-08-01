@@ -8,11 +8,11 @@
 #include <chrono>
 #include <thread>
 
-#include <can_streambuf.hpp>
-#include <crc.hpp>
-#include <protocol.hpp>
-#include <dds.hpp>
-#include <chassis.hpp>
+#include <can_streambuf.cpp>
+#include <crc.cpp>
+#include <protocol.cpp>
+#include <dds.cpp>
+#include <chassis.cpp>
 
 using robomaster::dds::metadata;
 using robomaster::dds::attitude;

@@ -3,7 +3,7 @@
 #include <vector>
 #include <functional>
 #include <thread>
-#include <protocol.hpp>
+#include <protocol.cpp>
 
 /*
 Unknown uids:

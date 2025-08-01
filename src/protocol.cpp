@@ -9,7 +9,8 @@
 #include <cstring>
 
 #include <iomanip>
-#include <crc.hpp>
+#include <iostream>
+#include <crc.cpp>
 
 namespace robomaster
 {

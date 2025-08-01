@@ -1,7 +1,7 @@
 #pragma once
 
-#include <protocol.hpp>
-#include <dds.hpp>
+#include <protocol.cpp>
+#include <dds.cpp>
 
 namespace robomaster
 {

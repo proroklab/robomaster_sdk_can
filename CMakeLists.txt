@@ -5,10 +5,10 @@ set (CMAKE_CXX_STANDARD 14)
 
 find_package(Threads REQUIRED)
 
-include_directories(${PROJECT_SOURCE_DIR}/inc)
+include_directories(${PROJECT_SOURCE_DIR}/src)
 
-add_executable(run_vel run_vel.cpp inc/can_streambuf.hpp inc/protocol.hpp inc/crc.hpp)
-add_executable(read_enc read_enc.cpp inc/can_streambuf.hpp inc/protocol.hpp inc/crc.hpp inc/chassis.hpp)
+add_executable(run_vel run_vel.cpp src/can_streambuf.cpp src/protocol.cpp src/crc.cpp)
+add_executable(read_enc read_enc.cpp src/can_streambuf.cpp src/protocol.cpp src/crc.cpp src/chassis.cpp)
 
 target_link_libraries(read_enc PRIVATE Threads::Threads)
 
