@@ -1,1 +1,1 @@
-astyle --options=style.cfg --recursive *\.hpp
+astyle --options=style.cfg --recursive --suffix=none *\.cpp *\.hpp
