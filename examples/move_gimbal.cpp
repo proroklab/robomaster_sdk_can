@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include <can_streambuf.hpp>
-#include <gimbal.hpp>
+#include <gimbal.cpp>
 
 
 #include <chrono>
