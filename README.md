@@ -109,3 +109,9 @@ The library uses exceptions for error handling:
 - `robomaster::can_error`: CAN socket operations
 - `robomaster::protocol_error`: Protocol parsing/validation
 - Standard exceptions: Invalid arguments, system errors
+
+## Thread Safety
+
+The library is not thread-safe and requires mutexes when the same interface is accessed
+by multiple threads. An example can be found in `examples/threading.cpp`.
+

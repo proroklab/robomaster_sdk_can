@@ -9,6 +9,7 @@
 
 #include <robomaster/can_streambuf.hpp>
 #include <robomaster/chassis.hpp>
+#include <robomaster/dds.hpp>
 
 using robomaster::metadata;
 using robomaster::wheel_encoders;
@@ -26,6 +27,7 @@ private:
 
     // Shared data with thread synchronization
     std::mutex data_mutex;
+    std::mutex can_mutex;
     std::vector<int16_t> current_motor_rpms;
 
     // Threading
@@ -64,18 +66,24 @@ public:
 
             // Initialize chassis
             chassis = std::make_unique<robomaster::chassis>(* can_out);
-            chassis->send_workmode(1);
+            {
+                std::lock_guard<std::mutex> lock(can_mutex);
+                chassis->send_workmode(1);
+            }
 
             std::cout << "Initializing DDS..." << std::endl;
 
             // Initialize DDS with encoder callback
             dds = std::make_unique<robomaster::dds>(* can_in, * can_out);
-            dds->subscribe(
-                std::function<void(const metadata&, const wheel_encoders&)>(
-                std::bind(&MinimalRobotController::cb_wheel_enc, this, _1, _2)
-                ),
-                20
-            );
+            {
+                std::lock_guard<std::mutex> lock(can_mutex);
+                dds->subscribe(
+                    std::function<void(const metadata&, const wheel_encoders&)>(
+                    std::bind(&MinimalRobotController::cb_wheel_enc, this, _1, _2)
+                    ),
+                    20
+                );
+            }
 
             std::cout << "Robot controller initialized successfully" << std::endl;
             return true;
@@ -111,6 +119,7 @@ public:
             // Stop all motion first
             if (chassis)
             {
+                std::lock_guard<std::mutex> lock(can_mutex);
                 chassis->send_wheel_speed(0, 0, 0, 0);
             }
 
@@ -156,6 +165,7 @@ private:
             // Send wheel speeds to chassis
             if (chassis)
             {
+                std::lock_guard<std::mutex> lock(can_mutex);
                 chassis->send_wheel_speed(speed, speed, speed, speed);
             }
 
@@ -178,6 +188,7 @@ private:
                     std::cout << "Sending heartbeat..." << std::endl;
                 }
 
+                std::lock_guard<std::mutex> lock(can_mutex);
                 chassis->send_heartbeat();
             }
 
