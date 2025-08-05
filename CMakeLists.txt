@@ -37,6 +37,11 @@ target_compile_options(robomaster_comm PRIVATE
         -Wall -Wextra -Wpedantic
         )
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(robomaster_comm PRIVATE DEBUG_MODE=1)
+    target_compile_options(robomaster_comm PRIVATE -g)
+endif()
+
 # Examples
 add_subdirectory(examples)
 
